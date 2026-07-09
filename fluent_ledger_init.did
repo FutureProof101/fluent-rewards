@@ -1,0 +1,57 @@
+// FLUENT ICRC-1/2/3 ledger — install/init argument (MAINNET TEMPLATE).
+//
+// ⛔ NOT DEPLOYABLE AS-IS. Every `[PLACEHOLDER: ...]` MUST be replaced with a real
+//    principal, and every init arg PM-confirmed, before ANY deploy (mainnet is
+//    hard-gated on PM sign-off — see builder brief). Local/testnet deploy may
+//    substitute your own dfx identity principal for all placeholders.
+//
+// Schema note (builder-report flagged): the pinned ledger
+// (ledger-suite-icrc-2025-10-27) takes `LedgerArg = variant { Init : InitArgs; ... }`,
+// so the value is wrapped in `variant { Init = record {...} }`. The brief showed the
+// bare InitArgs record; this wrapper is required for the modern ledger to decode it.
+//
+// Confirmed params (PM, 2026-07-09): total supply 1,000,000,000 FLUENT · decimals 8 ·
+// transfer_fee 0. Supply check: sum(initial_balances) = 100_000_000_000_000_000 base units.
+
+(variant {
+  Init = record {
+    minting_account = record {
+      owner = principal "aaaaa-aa";  // [PLACEHOLDER: JONNI_MAIN_PRINCIPAL] — your dfx identity principal
+      subaccount = null;
+    };
+    initial_balances = vec {
+      // Team vesting — 250,000,000 FLUENT (6-month cliff / 3-year vest; enforced off-ledger)
+      record { record { owner = principal "aaaaa-aa"; subaccount = null }; 25_000_000_000_000_000 : nat };  // [PLACEHOLDER: TEAM_VESTING_ACCOUNT]
+      // rewardsReserve — 300,000,000 FLUENT
+      record { record { owner = principal "aaaaa-aa"; subaccount = null }; 30_000_000_000_000_000 : nat };  // [PLACEHOLDER: REWARDS_RESERVE_ACCOUNT]
+      // liquidityReserve — 100,000,000 FLUENT
+      record { record { owner = principal "aaaaa-aa"; subaccount = null }; 10_000_000_000_000_000 : nat };  // [PLACEHOLDER: LIQUIDITY_RESERVE_ACCOUNT]
+      // discretionary treasury — 50,000,000 FLUENT
+      record { record { owner = principal "aaaaa-aa"; subaccount = null }; 5_000_000_000_000_000 : nat };   // [PLACEHOLDER: DISCRETIONARY_ACCOUNT]
+      // insurance/bugs — 150,000,000 FLUENT (gated: enforceable-rules definition pending R0A)
+      record { record { owner = principal "aaaaa-aa"; subaccount = null }; 15_000_000_000_000_000 : nat };  // [PLACEHOLDER: INSURANCE_ACCOUNT]
+      // customer airdrop — 50,000,000 FLUENT
+      record { record { owner = principal "aaaaa-aa"; subaccount = null }; 5_000_000_000_000_000 : nat };   // [PLACEHOLDER: CUSTOMER_AIRDROP_ACCOUNT]
+      // merchant airdrop — 100,000,000 FLUENT
+      record { record { owner = principal "aaaaa-aa"; subaccount = null }; 10_000_000_000_000_000 : nat };  // [PLACEHOLDER: MERCHANT_AIRDROP_ACCOUNT]
+    };
+    transfer_fee = 0 : nat;                 // PM-confirmed 2026-07-09
+    decimals = opt (8 : nat8);              // PM-confirmed 2026-07-09
+    token_name = "Fluent";
+    token_symbol = "FLUENT";
+    metadata = vec {};
+    archive_options = record {
+      num_blocks_to_archive = 1000 : nat64;
+      trigger_threshold = 2000 : nat64;
+      controller_id = principal "aaaaa-aa";  // [PLACEHOLDER: JONNI_MAIN_PRINCIPAL]
+      cycles_for_archive_creation = opt (10_000_000_000_000 : nat64);
+      max_message_size_bytes = null;
+      node_max_memory_size_bytes = null;
+      more_controller_ids = null;
+      max_transactions_per_response = null;
+    };
+    feature_flags = opt record { icrc2 = true };
+    maximum_number_of_accounts = opt (28_000_000 : nat64);
+    accounts_overflow_trim_quantity = opt (100_000 : nat64);
+  }
+})
