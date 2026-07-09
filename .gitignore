@@ -1,0 +1,20 @@
+# dfx / build artifacts
+.dfx/
+canisters/
+*.wasm
+*.wasm.gz
+.vessel/
+
+# mops
+.mops/
+
+# node
+node_modules/
+npm-debug.log*
+
+# local-only ledger init (real principals substituted for local deploy)
+fluent_ledger_init.local.did
+
+# editor / os
+.DS_Store
+*.swp

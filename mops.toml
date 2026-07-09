@@ -1,0 +1,11 @@
+[package]
+name = "fluent_rewards"
+version = "0.1.0"
+description = "Fluent Rewards accounting canister (R2 scaffold) + FLUENT ICRC ledger config"
+repository = "https://github.com/FutureProof101/fluent-rewards"
+
+[dependencies]
+base = "0.11.0"
+
+[canisters.rewards]
+main = "src/rewards/main.mo"

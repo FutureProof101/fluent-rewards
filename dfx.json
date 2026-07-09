@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "canisters": {
+    "fluent_ledger": {
+      "type": "custom",
+      "candid": "https://github.com/dfinity/ic/releases/download/ledger-suite-icrc-2025-10-27/ledger.did",
+      "wasm": "https://github.com/dfinity/ic/releases/download/ledger-suite-icrc-2025-10-27/ic-icrc1-ledger.wasm.gz",
+      "init_arg_file": "fluent_ledger_init.did"
+    },
+    "rewards": {
+      "type": "motoko",
+      "main": "src/rewards/main.mo"
+    }
+  }
+}
