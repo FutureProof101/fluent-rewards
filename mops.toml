@@ -9,3 +9,6 @@ base = "0.11.0"
 
 [canisters.rewards]
 main = "src/rewards/main.mo"
+
+[canisters.keys]
+main = "src/keys/main.mo"

@@ -49,3 +49,21 @@ dfx canister call rewards getScannerState
   allowlisted on the Lane 1 billing canister for `getBillingEventsSince`.
 - Not in scope here: Mode D fee-differential logic (R5), the live rewards↔billing connection
   (R1), `getBillingEventsSince` access-control allowlisting, R0A legal/entity decisions.
+
+## FluentKeys (src/keys) — mainnet deploy (Jonni-gated, run from your terminal)
+
+```bash
+# 1. Deploy to mainnet under YOUR identity (cycles from your wallet):
+dfx deploy keys --network ic --with-cycles 1000000000000
+
+# 2. Claim admin (first caller wins — do this IMMEDIATELY after deploy):
+dfx canister call keys bootstrapAdmin '()' --network ic
+
+# 3. Record the canister id (Phase 4 config needs it):
+dfx canister id keys --network ic
+
+# 4. Entitle the first merchant principal (the PM dashboard identity):
+dfx canister call keys addEntitled '(principal "<merchant-principal>")' --network ic
+```
+Key name ships as `test_key_1`; the `key_1` flip is a source-constant change +
+redeploy, ONLY on Jonni's confirmation (existing ciphertexts do not survive it).

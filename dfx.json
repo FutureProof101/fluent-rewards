@@ -10,6 +10,10 @@
     "rewards": {
       "type": "motoko",
       "main": "src/rewards/main.mo"
+    },
+    "keys": {
+      "type": "motoko",
+      "main": "src/keys/main.mo"
     }
   }
 }
