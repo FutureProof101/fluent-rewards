@@ -14,6 +14,10 @@
     "keys": {
       "type": "motoko",
       "main": "src/keys/main.mo"
+    },
+    "billing_stub": {
+      "type": "motoko",
+      "main": "src/billing_stub/main.mo"
     }
   }
 }

@@ -23,6 +23,10 @@ import Nat "mo:base/Nat";
 import Int "mo:base/Int";
 import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
+import Char "mo:base/Char";
+import Iter "mo:base/Iter";
+import Nat32 "mo:base/Nat32";
+import Text "mo:base/Text";
 import T "types/rewards";
 import Store "lib/store";
 import Config "lib/config";
@@ -338,4 +342,119 @@ persistent actor Rewards {
   };
 
   public query func getMockEventCount() : async Nat { mockEventBuffer.size() };
+
+  // ── Phase 5: LIVE event feed (mock → real) ────────────────────────────────
+  // Pulls the Fluent billing canister's getBillingEventsSince (Lane 1 R1:
+  // eventSeq cursor, strictly-exclusive `seq > cursor`, deliberately open
+  // read-only — architect access ruling 2026-07-12). SAME persisted cursor
+  // (scannerState.lastSeenEventSeq) the mock scanner uses; the same
+  // per-(paymentId, campaignId) dedup makes rescans idempotent even if the
+  // cursor is reset. Only "payment.succeeded" events accrue; the cursor still
+  // advances over everything examined so unrelated events can never wedge it.
+  var billingCanisterId : Text = Config.BILLING_CANISTER_ID;
+
+  // Local-proof override ONLY (a local canister cannot call mainnet x2sod);
+  // production keeps the config default.
+  public shared ({ caller }) func setBillingCanisterId(id : Text) : async Result<(), Text> {
+    if (not isAdmin(caller)) { return #err("Unauthorized: admin only") };
+    billingCanisterId := id;
+    #ok(());
+  };
+
+  // Partial candid record decode (subtyping): only the fields we consume.
+  type RemoteBillingEvent = {
+    eventType : Text;
+    merchantId : Text;
+    payloadJson : Text;
+    eventSeq : ?Nat;
+    createdAt : Int;
+  };
+
+  // Targeted extractors for OUR OWN payload format (built by lib/billing.mo's
+  // payment.succeeded emitter — flat JSON, no nesting, no escapes in the
+  // fields we read). Not a general JSON parser by design.
+  func jsonNat(json : Text, key : Text) : ?Nat {
+    let parts = Iter.toArray(Text.split(json, #text ("\"" # key # "\":")));
+    if (parts.size() < 2) { return null };
+    var n : Nat = 0;
+    var seen = false;
+    label read for (c in parts[1].chars()) {
+      if (Char.isDigit(c)) {
+        n := n * 10 + Nat32.toNat(Char.toNat32(c) - 48);
+        seen := true;
+      } else { break read };
+    };
+    if (seen) ?n else null;
+  };
+  func jsonText(json : Text, key : Text) : ?Text {
+    let parts = Iter.toArray(Text.split(json, #text ("\"" # key # "\":\"")));
+    if (parts.size() < 2) { return null };
+    let out = Buffer.Buffer<Char>(32);
+    label read for (c in parts[1].chars()) {
+      if (c == '\"') { break read };
+      out.add(c);
+    };
+    ?Text.fromIter(out.vals());
+  };
+
+  func mapToken(sym : Text) : ?T.TokenSymbol {
+    switch (sym) {
+      case ("ckUSDC") ?#ckUSDC;
+      case ("ICP") ?#ICP;
+      case ("ckBTC") ?#ckBTC;
+      case (_) null;
+    };
+  };
+
+  public func processLiveRewardEvents(limit : Nat) : async Result<{ examined : Nat; accrued : Nat; nextCursor : Nat }, Text> {
+    let cap : Nat = if (limit > Config.MAX_SCAN_LIMIT) Config.MAX_SCAN_LIMIT else limit;
+    let billing = actor (billingCanisterId) : actor {
+      getBillingEventsSince : (Nat, Nat) -> async { events : [RemoteBillingEvent]; nextCursor : Nat; hasMore : Bool };
+    };
+    let res = try {
+      await billing.getBillingEventsSince(scannerState.lastSeenEventSeq, cap);
+    } catch (_) {
+      return #err("Billing canister pull failed (canister " # billingCanisterId # ")");
+    };
+    var accrued : Nat = 0;
+    for (ev in res.events.vals()) {
+      if (ev.eventType == "payment.succeeded") {
+        let parsed : ?T.RewardEligiblePaymentEvent = do ? {
+          {
+            eventSeq = switch (ev.eventSeq) { case (?s) s; case null 0 };
+            paymentId = jsonText(ev.payloadJson, "paymentId")!;
+            paymentIntentId = jsonText(ev.payloadJson, "paymentIntentId")!;
+            merchantId = ev.merchantId;
+            planId = null;
+            buyerPrincipal = jsonText(ev.payloadJson, "customerPrincipal")!;
+            token = mapToken(jsonText(ev.payloadJson, "tokenSymbol")!)!;
+            grossAmount = jsonNat(ev.payloadJson, "grossAmount")!;
+            platformFee = jsonNat(ev.payloadJson, "platformFee")!;
+            merchantNet = jsonNat(ev.payloadJson, "merchantNet")!;
+            blockIndex = jsonNat(ev.payloadJson, "merchantBlock"); // ledger proof; payload "null" → null
+            finalizedAt = ev.createdAt;
+          };
+        };
+        switch (parsed) {
+          case (?event) {
+            let merchantCampaigns = Array.filter<T.MerchantRewardCampaign>(
+              Store.values(campaigns),
+              func(c) { c.merchantId == event.merchantId and c.enabled },
+            );
+            for (c in merchantCampaigns.vals()) {
+              switch (accrueInternal(event, c.campaignId)) {
+                case (#ok(_)) { accrued += 1 };
+                case (#err(_)) {}; // dedup / cap rejections are expected on rescan
+              };
+            };
+          };
+          case null {}; // malformed payload — skip, never wedge the cursor
+        };
+      };
+    };
+    // Advance to the producer's cursor (last EXAMINED seq), not just the last
+    // accrued one — unrelated event types must not stall the scan.
+    scannerState := { scannerState with lastSeenEventSeq = res.nextCursor };
+    #ok({ examined = res.events.size(); accrued; nextCursor = res.nextCursor });
+  };
 };

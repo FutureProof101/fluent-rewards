@@ -11,4 +11,11 @@ module {
 
   // processRewardEvents batch clamp (brief: 100-500). Callers cannot exceed this.
   public let MAX_SCAN_LIMIT : Nat = 500;
+
+  // Phase 5: the LIVE Fluent billing canister (getBillingEventsSince producer).
+  // Architect access ruling 2026-07-12: read-only pull approved — the endpoint
+  // shipped deliberately open; allowlisting is later governance (R0A item 6).
+  // setBillingCanisterId overrides this ONLY for local-replica proofs (a local
+  // canister cannot call a mainnet one).
+  public let BILLING_CANISTER_ID : Text = "x2sod-eqaaa-aaaaa-qhk6a-cai";
 };
