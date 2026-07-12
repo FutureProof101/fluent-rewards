@@ -77,7 +77,7 @@ redeploy, ONLY on Jonni's confirmation (existing ciphertexts do not survive it).
   seam. Local proofs: non-entitled rejected, two principals → different keys.
   LESSON: attach a cycles CEILING (30B) — unspent management-call cycles
   refund; the local replica charged >10B for the "10B" test key.
-  Mainnet deploy = Jonni-gated (commands above); canister id to be recorded
+  Mainnet deploy DONE 2026-07-12 by Jonni: canister **m5w6h-pqaaa-aaaau-ag22q-cai**, upgraded to key_1 same session (skipping the test_key_1 interim — no ciphertext migration ever needed). Recorded
   here when run.
 - **Live event wire** (`ebb6c19`): `processLiveRewardEvents` pulls the LIVE
   billing canister's `getBillingEventsSince` (config default `x2sod`;
