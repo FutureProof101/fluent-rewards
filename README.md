@@ -67,3 +67,23 @@ dfx canister call keys addEntitled '(principal "<merchant-principal>")' --networ
 ```
 Key name ships as `test_key_1`; the `key_1` flip is a source-constant change +
 redeploy, ONLY on Jonni's confirmation (existing ciphertexts do not survive it).
+
+## Decisions & Memory — 2026-07-12 (Day-3 Phases 3 + 5)
+
+- **FluentKeys** (`src/keys`, `239c93b`): self-owned vetKD canister. Context
+  `fluent_customer_email_v1` (exact bytes, forever); `KEY_NAME = "test_key_1"`
+  (`key_1` ONLY via Jonni-confirmed redeploy — ciphertexts not portable);
+  derive input = msg.caller ALWAYS; entitlement allowlist stub = the premium
+  seam. Local proofs: non-entitled rejected, two principals → different keys.
+  LESSON: attach a cycles CEILING (30B) — unspent management-call cycles
+  refund; the local replica charged >10B for the "10B" test key.
+  Mainnet deploy = Jonni-gated (commands above); canister id to be recorded
+  here when run.
+- **Live event wire** (`ebb6c19`): `processLiveRewardEvents` pulls the LIVE
+  billing canister's `getBillingEventsSince` (config default `x2sod`;
+  architect read-only ruling 2026-07-12; allowlisting stays R0A item 6).
+  Proven against the 3 REAL live payment.succeeded events (seeded verbatim
+  into `src/billing_stub` — a local canister cannot call mainnet): accrued
+  3/3, rescan 0/0 (idempotent), the 2026-07-10 x402 machine payment now has a
+  #pending FLUENT accrual. Rewards canister remains LOCAL (no mainnet token
+  movement — R0A gates unchanged).
